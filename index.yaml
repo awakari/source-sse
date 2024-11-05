@@ -3,12 +3,12 @@ entries:
   source-sse:
   - apiVersion: v2
     appVersion: latest
-    created: "2024-11-05T16:13:43.884006277Z"
+    created: "2024-11-05T20:27:33.647723178Z"
     description: A Helm chart for Awakari source-sse
-    digest: 310d29c9e08088ebf6bfd1f9cfd0dce02965ff33bd11ac5d02fe8995563fbc83
+    digest: 217e453f256c5a4121dce2109ea0747d6f9a326568354f1beaf7826057a0654f
     name: source-sse
     type: application
     urls:
     - source-sse-0.0.0.tgz
     version: 0.0.0
-generated: "2024-11-05T16:13:43.883411783Z"
+generated: "2024-11-05T20:27:33.646482497Z"
