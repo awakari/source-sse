@@ -89,7 +89,7 @@ func (h *handler) handleStreamEvent(ctx context.Context, ssEvt *sse.Event) (err 
 	err = sonic.Unmarshal(ssEvt.Data, &raw)
 	if err == nil {
 		for _, i := range h.interceptors {
-			if i.Matches(ssEvt.Event, raw) {
+			if i.Matches(ssEvt, raw) {
 				err = i.Handle(ctx, ssEvt)
 				break
 			}

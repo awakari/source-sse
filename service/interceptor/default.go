@@ -16,7 +16,7 @@ func NewDefault(w writer.Service) Interceptor {
 	}
 }
 
-func (d defaultInterceptor) Matches(et []byte, raw map[string]any) (matches bool) {
+func (d defaultInterceptor) Matches(ssEvt *sse.Event, raw map[string]any) (matches bool) {
 	return true
 }
 

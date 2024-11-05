@@ -23,7 +23,7 @@ func NewMastodon(cfgEvts config.EventsConfig, w events.Writer) Interceptor {
 	}
 }
 
-func (m mastodon) Matches(et []byte, raw map[string]any) (matches bool) {
+func (m mastodon) Matches(ssEvt *sse.Event, raw map[string]any) (matches bool) {
 	if _, accOk := raw["account"]; !accOk {
 		return false
 	}

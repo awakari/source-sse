@@ -100,8 +100,8 @@ func main() {
 	defer pubMastodon.Close()
 
 	interceptors := []interceptor.Interceptor{
-		interceptor.NewMastodon(cfg.Api.Events, pubMastodon),
-		interceptor.NewDefault(svcWriter),
+		interceptor.NewLogging(interceptor.NewMastodon(cfg.Api.Events, pubMastodon), log, "mastodon"),
+		interceptor.NewLogging(interceptor.NewDefault(svcWriter), log, "default"),
 	}
 
 	handlersLock := &sync.Mutex{}
