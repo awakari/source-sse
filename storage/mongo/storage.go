@@ -22,9 +22,9 @@ type storageMongo struct {
 
 type record struct {
 	Url          string    `bson:"url"`
-	Auth         string    `bson:"auth,omitempty"`
+	Auth         string    `bson:"auth"`
 	GroupId      string    `bson:"gid"`
-	UserId       string    `bson:"uid,omitempty"`
+	UserId       string    `bson:"uid"`
 	ReplicaIndex uint32    `bson:"ridx"`
 	CreatedAt    time.Time `bson:"createdAt"`
 }

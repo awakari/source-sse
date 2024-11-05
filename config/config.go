@@ -8,7 +8,7 @@ import (
 type Config struct {
 	Api   ApiConfig
 	Db    DbConfig
-	Event EventConfig
+	Event SseConfig
 	Log   struct {
 		Level int `envconfig:"LOG_LEVEL" default:"-4" required:"true"`
 	}
@@ -25,6 +25,25 @@ type ApiConfig struct {
 	}
 	UserAgent string `envconfig:"API_USER_AGENT" default:"Awakari" required:"true"`
 	GroupId   string `envconfig:"API_GROUP_ID" default:"default" required:"true"`
+	Events    EventsConfig
+}
+
+type EventsConfig struct {
+	Uri        string `envconfig:"API_EVENTS_URI" default:"events:50051" required:"true"`
+	Connection struct {
+		Count struct {
+			Init uint32 `envconfig:"API_EVENTS_CONN_COUNT_INIT" default:"1" required:"true"`
+			Max  uint32 `envconfig:"API_EVENTS_CONN_COUNT_MAX" default:"100" required:"true"`
+		}
+		IdleTimeout time.Duration `envconfig:"API_EVENTS_CONN_IDLE_TIMEOUT" default:"15m" required:"true"`
+	}
+	Source string `envconfig:"API_EVENTS_SOURCE" default:"https://awakari.com/pub.html?srcType=sse" required:"true"`
+	Limit  uint32 `envconfig:"API_EVENTS_LIMIT" default:"1000" required:"true"`
+	Topics TopicsConfig
+}
+
+type TopicsConfig struct {
+	Mastodon string `envconfig:"API_EVENTS_TOPIC_MASTODON" default:"source-sse-mastodon" required:"true"`
 }
 
 type DbConfig struct {
@@ -43,9 +62,9 @@ type DbConfig struct {
 	}
 }
 
-type EventConfig struct {
-	StreamTimeout time.Duration `envconfig:"EVENT_STREAM_TIMEOUT" default:"5m" required:"true"`
-	Type          string        `envconfig:"EVENT_TYPE" required:"true" default:"com_awakari_sse_v1"`
+type SseConfig struct {
+	StreamTimeout time.Duration `envconfig:"SSE_STREAM_TIMEOUT" default:"5m" required:"true"`
+	Type          string        `envconfig:"SSE_TYPE" required:"true" default:"com_awakari_sse_v1"`
 }
 
 type ReplicaConfig struct {

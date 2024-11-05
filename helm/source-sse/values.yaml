@@ -86,6 +86,17 @@ api:
     uri: "api:50051"
   userAgent: "Awakari"
   groupId: "default"
+  events:
+    uri: "events:50051"
+    conn:
+      count:
+        init: 1
+        max: 2
+      idleTimeout: "15m"
+    source: "https://awakari.com/pub.html?srcType=sse"
+    limit: 1000
+    topic:
+      mastodon: "source-sse-mastodon"
 db:
   # Database name to use.
   name: source
@@ -103,7 +114,7 @@ db:
   tls:
     enabled: false
     insecure: false
-event:
+sse:
   stream:
     timeout: "5m"
   type: "com_awakari_sse_v1"

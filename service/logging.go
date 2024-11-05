@@ -34,7 +34,7 @@ func (l logging) Read(ctx context.Context, url string) (str model.Stream, err er
 
 func (l logging) Delete(ctx context.Context, url, groupId, userId string) (err error) {
 	err = l.svc.Delete(ctx, url, groupId, userId)
-	l.log.Log(context.TODO(), logLevel(err), fmt.Sprintf("service.Delete(%s): %s", url, err))
+	l.log.Log(context.TODO(), logLevel(err), fmt.Sprintf("service.Delete(%s, %s/%s): %s", url, groupId, userId, err))
 	return
 }
 

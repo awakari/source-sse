@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"github.com/awakari/source-sse/config"
 	"github.com/awakari/source-sse/model"
-	"github.com/awakari/source-sse/service/writer"
+	"github.com/awakari/source-sse/service/interceptor"
+	"github.com/bytedance/sonic"
 	"github.com/r3labs/sse/v2"
 	"io"
 	"time"
@@ -17,25 +18,27 @@ type Handler interface {
 }
 
 type handler struct {
-	url    string
-	str    model.Stream
-	cfgApi config.ApiConfig
-	cfgEvt config.EventConfig
-	w      writer.Service
+	url          string
+	str          model.Stream
+	cfgApi       config.ApiConfig
+	cfgEvt       config.SseConfig
+	interceptors []interceptor.Interceptor
 
 	clientSse *sse.Client
 	chSsEvts  chan *sse.Event
 }
 
-type Factory func(url string, str model.Stream, cfgApi config.ApiConfig, cfgEvt config.EventConfig, w writer.Service) Handler
+type Factory func(url string, str model.Stream) Handler
 
-var New Factory = func(url string, str model.Stream, cfgApi config.ApiConfig, cfgEvt config.EventConfig, w writer.Service) Handler {
-	return &handler{
-		url:    url,
-		str:    str,
-		cfgApi: cfgApi,
-		cfgEvt: cfgEvt,
-		w:      w,
+func NewFactory(cfgApi config.ApiConfig, cfgEvt config.SseConfig, interceptors []interceptor.Interceptor) Factory {
+	return func(url string, str model.Stream) Handler {
+		return &handler{
+			url:          url,
+			str:          str,
+			cfgApi:       cfgApi,
+			cfgEvt:       cfgEvt,
+			interceptors: interceptors,
+		}
 	}
 }
 
@@ -67,7 +70,7 @@ func (h *handler) handleStream(ctx context.Context) (err error) {
 		for {
 			select {
 			case ssEvt := <-h.chSsEvts:
-				h.handleStreamEvent(ctx, ssEvt)
+				_ = h.handleStreamEvent(ctx, ssEvt)
 			case <-ctx.Done():
 				err = ctx.Err()
 			case <-time.After(h.cfgEvt.StreamTimeout):
@@ -81,7 +84,16 @@ func (h *handler) handleStream(ctx context.Context) (err error) {
 	return
 }
 
-func (h *handler) handleStreamEvent(ctx context.Context, ssEvt *sse.Event) {
-	fmt.Printf("stream %s event: %+v\n", h.url, ssEvt)
+func (h *handler) handleStreamEvent(ctx context.Context, ssEvt *sse.Event) (err error) {
+	var raw map[string]any
+	err = sonic.Unmarshal(ssEvt.Data, &raw)
+	if err == nil {
+		for _, i := range h.interceptors {
+			if i.Matches(ssEvt.Event, raw) {
+				err = i.Handle(ctx, ssEvt)
+				break
+			}
+		}
+	}
 	return
 }

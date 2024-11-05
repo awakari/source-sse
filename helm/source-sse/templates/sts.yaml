@@ -70,16 +70,28 @@ spec:
               value: "{{ .Values.db.tls.insecure }}"
             - name: DB_TABLE_RETENTION
               value: "{{ .Values.db.table.retention }}"
-            - name: EVENT_TYPE
-              value: "{{ .Values.event.type }}"
+            - name: SSE_TYPE
+              value: "{{ .Values.sse.type }}"
             - name: LOG_LEVEL
               value: "{{ .Values.log.level }}"
             - name: API_USER_AGENT
               value: "{{ .Values.api.userAgent }}"
             - name: API_GROUP_ID
               value: "{{ .Values.api.groupId }}"
-            - name: EVENT_STREAM_TIMEOUT
-              value: "{{ .Values.event.stream.timeout }}"
+            - name: SSE_STREAM_TIMEOUT
+              value: "{{ .Values.sse.stream.timeout }}"
+            - name: API_EVENTS_URI
+              value: "{{ .Values.api.events.uri }}"
+            - name: API_EVENTS_CONN_COUNT_INIT
+              value: "{{ .Values.api.events.conn.count.init }}"
+            - name: API_EVENTS_CONN_COUNT_MAX
+              value: "{{ .Values.api.events.conn.count.max }}"
+            - name: API_EVENTS_CONN_IDLE_TIMEOUT
+              value: "{{ .Values.api.events.conn.idleTimeout }}"
+            - name: API_EVENTS_SOURCE
+              value: "{{ .Values.api.events.source }}"
+            - name: API_EVENTS_TOPIC_MASTODON
+              value: "{{ .Values.api.events.topic.mastodon }}"
             - name: REPLICA_COUNT
               value: "{{ .Values.replicaCount }}"
             - name: REPLICA_NAME

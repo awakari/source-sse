@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"github.com/awakari/client-sdk-go/api"
 	apiGrpc "github.com/awakari/source-sse/api/grpc"
+	"github.com/awakari/source-sse/api/grpc/events"
 	"github.com/awakari/source-sse/config"
 	"github.com/awakari/source-sse/model"
 	"github.com/awakari/source-sse/service"
 	"github.com/awakari/source-sse/service/handler"
+	"github.com/awakari/source-sse/service/interceptor"
 	"github.com/awakari/source-sse/service/writer"
 	"github.com/awakari/source-sse/storage/mongo"
+	grpcpool "github.com/processout/grpc-go-pool"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log/slog"
 	"os"
 	"strconv"
@@ -67,11 +72,45 @@ func main() {
 	}
 	defer stor.Close()
 
+	connPoolEvts, err := grpcpool.New(
+		func() (*grpc.ClientConn, error) {
+			return grpc.NewClient(cfg.Api.Events.Uri, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		},
+		int(cfg.Api.Events.Connection.Count.Init),
+		int(cfg.Api.Events.Connection.Count.Max),
+		cfg.Api.Events.Connection.IdleTimeout,
+	)
+	if err != nil {
+		panic(err)
+	}
+	defer connPoolEvts.Close()
+	clientEvts := events.NewClientPool(connPoolEvts)
+	svcEvts := events.NewService(clientEvts)
+	svcEvts = events.NewLoggingMiddleware(svcEvts, log)
+	err = svcEvts.SetStream(context.TODO(), cfg.Api.Events.Topics.Mastodon, cfg.Api.Events.Limit)
+	if err != nil {
+		panic(err)
+	}
+
+	var pubMastodon events.Writer
+	pubMastodon, err = svcEvts.NewPublisher(ctx, cfg.Api.Events.Topics.Mastodon)
+	if err != nil {
+		panic(err)
+	}
+	defer pubMastodon.Close()
+
+	interceptors := []interceptor.Interceptor{
+		interceptor.NewMastodon(cfg.Api.Events, pubMastodon),
+		interceptor.NewDefault(svcWriter),
+	}
+
 	handlersLock := &sync.Mutex{}
 	handlerByUrl := make(map[string]handler.Handler)
-	svc := service.NewService(svcWriter, cfg.Api, cfg.Event, stor, uint32(replicaIndex), handlersLock, handlerByUrl, handler.New)
+	handlerFactory := handler.NewFactory(cfg.Api, cfg.Event, interceptors)
+
+	svc := service.NewService(stor, uint32(replicaIndex), handlersLock, handlerByUrl, handlerFactory)
 	svc = service.NewServiceLogging(svc, log)
-	err = resumeHandlers(ctx, svc, svcWriter, uint32(replicaIndex), cfg, handlersLock, handlerByUrl)
+	err = resumeHandlers(ctx, log, svc, uint32(replicaIndex), handlersLock, handlerByUrl, handlerFactory)
 	if err != nil {
 		panic(err)
 	}
@@ -85,12 +124,12 @@ func main() {
 
 func resumeHandlers(
 	ctx context.Context,
+	log *slog.Logger,
 	svc service.Service,
-	svcWriter writer.Service,
 	replicaIndex uint32,
-	cfg config.Config,
 	handlersLock *sync.Mutex,
 	handlerByUrl map[string]handler.Handler,
+	handlerFactory handler.Factory,
 ) (err error) {
 	var cursor string
 	var urls []string
@@ -101,10 +140,11 @@ func resumeHandlers(
 			if len(urls) == 0 {
 				break
 			}
+			cursor = urls[len(urls)-1]
 			for _, url := range urls {
 				str, err = svc.Read(ctx, url)
 				if err == nil && str.Replica == replicaIndex {
-					resumeHandler(ctx, url, str, svcWriter, cfg, handlersLock, handlerByUrl)
+					resumeHandler(ctx, log, url, str, handlersLock, handlerByUrl, handlerFactory)
 				}
 				if err != nil {
 					break
@@ -120,16 +160,17 @@ func resumeHandlers(
 
 func resumeHandler(
 	ctx context.Context,
+	log *slog.Logger,
 	url string,
 	str model.Stream,
-	w writer.Service,
-	cfg config.Config,
 	handlersLock *sync.Mutex,
 	handlerByUrl map[string]handler.Handler,
+	handlerFactory handler.Factory,
 ) {
 	handlersLock.Lock()
 	defer handlersLock.Unlock()
-	h := handler.New(url, str, cfg.Api, cfg.Event, w)
+	h := handlerFactory(url, str)
 	handlerByUrl[url] = h
 	go h.Handle(ctx)
+	log.Info(fmt.Sprintf("resumed handler for %s", url))
 }

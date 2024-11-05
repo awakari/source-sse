@@ -4,10 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/awakari/source-sse/config"
 	"github.com/awakari/source-sse/model"
 	"github.com/awakari/source-sse/service/handler"
-	"github.com/awakari/source-sse/service/writer"
 	"github.com/awakari/source-sse/storage"
 	"sync"
 	"time"
@@ -21,9 +19,6 @@ type Service interface {
 }
 
 type svc struct {
-	w              writer.Service
-	cfgApi         config.ApiConfig
-	cfgEvt         config.EventConfig
 	stor           storage.Storage
 	replicaIndex   uint32
 	handlersLock   *sync.Mutex
@@ -36,9 +31,6 @@ var ErrConflict = errors.New("conflict")
 var ErrUnexpected = errors.New("unexpected")
 
 func NewService(
-	w writer.Service,
-	cfgApi config.ApiConfig,
-	cfgEvt config.EventConfig,
 	stor storage.Storage,
 	replicaIndex uint32,
 	handlersLock *sync.Mutex,
@@ -46,9 +38,6 @@ func NewService(
 	handlerFactory handler.Factory,
 ) Service {
 	return svc{
-		w:              w,
-		cfgApi:         cfgApi,
-		cfgEvt:         cfgEvt,
 		stor:           stor,
 		replicaIndex:   replicaIndex,
 		handlersLock:   handlersLock,
@@ -69,7 +58,7 @@ func (s svc) Create(ctx context.Context, url, auth, groupId, userId string, at t
 	if err == nil {
 		s.handlersLock.Lock()
 		defer s.handlersLock.Unlock()
-		h := s.handlerFactory(url, str, s.cfgApi, s.cfgEvt, s.w)
+		h := s.handlerFactory(url, str)
 		s.handlerByUrl[url] = h
 		go h.Handle(context.Background())
 	}
