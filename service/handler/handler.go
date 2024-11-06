@@ -48,16 +48,15 @@ func (h *handler) Close() error {
 }
 
 func (h *handler) Handle(ctx context.Context) {
-	var err error
 	for {
-		err = h.handleStream(ctx)
-		if err != nil {
+		evtN, err := h.handleStream(ctx)
+		if evtN == 0 && err != nil {
 			panic(err)
 		}
 	}
 }
 
-func (h *handler) handleStream(ctx context.Context) (err error) {
+func (h *handler) handleStream(ctx context.Context) (evtN uint64, err error) {
 	h.clientSse = sse.NewClient(h.url)
 	if h.str.Auth != "" {
 		h.clientSse.Headers["Authorization"] = h.str.Auth
@@ -71,6 +70,7 @@ func (h *handler) handleStream(ctx context.Context) (err error) {
 			select {
 			case ssEvt := <-h.chSsEvts:
 				_ = h.handleStreamEvent(ctx, h.url, ssEvt)
+				evtN++
 			case <-ctx.Done():
 				err = ctx.Err()
 			case <-time.After(h.cfgEvt.StreamTimeout):

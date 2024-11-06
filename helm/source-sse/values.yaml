@@ -116,7 +116,7 @@ db:
     insecure: false
 sse:
   stream:
-    timeout: "5m"
+    timeout: "1m"
   type: "com_awakari_sse_v1"
 log:
   # https://pkg.go.dev/golang.org/x/exp/slog#Level

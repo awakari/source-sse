@@ -63,7 +63,7 @@ type DbConfig struct {
 }
 
 type SseConfig struct {
-	StreamTimeout time.Duration `envconfig:"SSE_STREAM_TIMEOUT" default:"5m" required:"true"`
+	StreamTimeout time.Duration `envconfig:"SSE_STREAM_TIMEOUT" default:"1m" required:"true"`
 	Type          string        `envconfig:"SSE_TYPE" required:"true" default:"com_awakari_sse_v1"`
 }
 
