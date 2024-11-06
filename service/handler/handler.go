@@ -70,7 +70,7 @@ func (h *handler) handleStream(ctx context.Context) (err error) {
 		for {
 			select {
 			case ssEvt := <-h.chSsEvts:
-				_ = h.handleStreamEvent(ctx, ssEvt)
+				_ = h.handleStreamEvent(ctx, h.url, ssEvt)
 			case <-ctx.Done():
 				err = ctx.Err()
 			case <-time.After(h.cfgEvt.StreamTimeout):
@@ -84,13 +84,13 @@ func (h *handler) handleStream(ctx context.Context) (err error) {
 	return
 }
 
-func (h *handler) handleStreamEvent(ctx context.Context, ssEvt *sse.Event) (err error) {
+func (h *handler) handleStreamEvent(ctx context.Context, url string, ssEvt *sse.Event) (err error) {
 	var raw map[string]any
 	err = sonic.Unmarshal(ssEvt.Data, &raw)
 	if err == nil {
+		var matched bool
 		for _, i := range h.interceptors {
-			if i.Matches(ssEvt, raw) {
-				err = i.Handle(ctx, ssEvt)
+			if matched, err = i.Handle(ctx, url, ssEvt, raw); matched {
 				break
 			}
 		}

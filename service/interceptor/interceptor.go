@@ -6,6 +6,5 @@ import (
 )
 
 type Interceptor interface {
-	Matches(ssEvt *sse.Event, raw map[string]any) (matches bool)
-	Handle(ctx context.Context, ssEvt *sse.Event) (err error)
+	Handle(ctx context.Context, src string, ssEvt *sse.Event, raw map[string]any) (matches bool, err error)
 }

@@ -101,6 +101,7 @@ func main() {
 
 	interceptors := []interceptor.Interceptor{
 		interceptor.NewLogging(interceptor.NewMastodon(cfg.Api.Events, pubMastodon), log, "mastodon"),
+		interceptor.NewLogging(interceptor.NewWikiMedia(svcWriter, cfg.Api.GroupId, cfg.Event.Type), log, "wikimedia"),
 		interceptor.NewLogging(interceptor.NewDefault(svcWriter), log, "default"),
 	}
 
