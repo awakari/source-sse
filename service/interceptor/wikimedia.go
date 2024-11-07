@@ -10,6 +10,7 @@ import (
 	"github.com/segmentio/ksuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"strconv"
+	"strings"
 )
 
 type wikiMedia struct {
@@ -25,12 +26,14 @@ const keyWikiMediaNew = "new"
 const keyWikiMediaNotifyUrl = "notify_url" // -> objecturl
 const keyWikiMediaParsedComment = "parsedcomment"
 const keyWikiMediaRevision = "revision"
+const keyWikiMediaServerName = "server_name"
 const keyWikiMediaServerUrl = "server_url"
 const keyWikiMediaTimestamp = "timestamp" // e.g. 1730883383
 const keyWikiMediaTitle = "title"
 const keyWikiMediaTitleUrl = "title_url"
 const keyWikiMediaType = "type" // -> action
 const keyWikiMediaUser = "user" // -> subject
+const keyWikiMediaWiki = "wiki"
 
 const valWikiMediaSchema = "/mediawiki/recentchange/1.0.0"
 
@@ -102,10 +105,7 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 				}
 			}
 
-			objUrl, objUrlOk := raw[keyWikiMediaNotifyUrl]
-			if !objUrlOk {
-				objUrl, objUrlOk = raw[keyWikiMediaTitleUrl]
-			}
+			objUrl, objUrlOk := raw[keyWikiMediaTitleUrl]
 			if objUrlOk {
 				evt.Attributes[model.CeKeyObjectUrl] = &pb.CloudEventAttributeValue{
 					Attr: &pb.CloudEventAttributeValue_CeUri{
@@ -213,6 +213,40 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 				}
 			}
 
+			serverName, serverNameOk := raw[keyWikiMediaWiki]
+			if serverNameOk {
+				serverName, serverNameOk = serverName.(string)
+			}
+			wiki, wikiOk := raw[keyWikiMediaWiki]
+			if wikiOk {
+				wiki, wikiOk = wiki.(string)
+			}
+			if serverNameOk && wikiOk {
+				serverNameParts := strings.Split(serverName.(string), ".")
+				if len(serverNameParts) > 0 {
+					lang := serverNameParts[0]
+					if lang != "" && strings.HasPrefix(wiki.(string), lang) {
+						evt.Attributes[model.CeKeyLanguage] = &pb.CloudEventAttributeValue{
+							Attr: &pb.CloudEventAttributeValue_CeString{
+								CeString: lang,
+							},
+						}
+					}
+				}
+			}
+
+			notifyUrl, notifyUrlOk := raw[keyWikiMediaNotifyUrl]
+			if notifyUrlOk {
+				notifyUrl, notifyUrlOk = notifyUrl.(string)
+			}
+			if notifyUrlOk {
+				evt.Attributes[model.CeKeyNotifyUrl] = &pb.CloudEventAttributeValue{
+					Attr: &pb.CloudEventAttributeValue_CeUri{
+						CeUri: notifyUrl.(string),
+					},
+				}
+			}
+
 			var userId string
 			serverUrl, serverUrlOk := raw[keyWikiMediaServerUrl]
 			if serverUrlOk {
@@ -225,7 +259,7 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 			if evt.GetTextData() == "" {
 				err = fmt.Errorf("empty event text content, source: %s, data: %s", src, string(ssEvt.Data))
 			}
-			if objUrl, objUrlOk := evt.Attributes[model.CeKeyObjectUrl]; objUrl.GetCeUri() == "" || !objUrlOk {
+			if objUrlAttr, objUrlAttrOk := evt.Attributes[model.CeKeyObjectUrl]; objUrlAttr.GetCeUri() == "" || !objUrlAttrOk {
 				err = fmt.Errorf("empty event object url, source: %s, data: %s", src, string(ssEvt.Data))
 			}
 			if err == nil {

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 COVERAGE=$(cat cover.tmp)
-THRESHOLD=49
+THRESHOLD=50
 if [[ ${COVERAGE} -lt ${THRESHOLD} ]]; \
   then \
     echo "FAILED: test coverage ${COVERAGE}% < ${THRESHOLD}%"; \
