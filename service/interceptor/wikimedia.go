@@ -223,9 +223,9 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 			}
 			if serverNameOk && wikiOk {
 				serverNameParts := strings.Split(serverName.(string), ".")
-				if len(serverNameParts) > 0 {
+				if len(serverNameParts) > 2 {
 					lang := serverNameParts[0]
-					if lang != "" && strings.HasPrefix(wiki.(string), lang) {
+					if lang != "" && len(lang) < 4 && strings.HasPrefix(wiki.(string), lang) {
 						evt.Attributes[model.CeKeyLanguage] = &pb.CloudEventAttributeValue{
 							Attr: &pb.CloudEventAttributeValue_CeString{
 								CeString: lang,
