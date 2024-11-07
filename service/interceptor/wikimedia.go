@@ -2,6 +2,7 @@ package interceptor
 
 import (
 	"context"
+	"fmt"
 	"github.com/awakari/source-sse/model"
 	"github.com/awakari/source-sse/service/writer"
 	"github.com/cloudevents/sdk-go/binding/format/protobuf/v2/pb"
@@ -19,6 +20,7 @@ type wikiMedia struct {
 
 const keyWikiMediaSchema = "$schema"
 const keyWikiMediaLength = "length"
+const keyWikiMediaLogActionComment = "log_action_comment"
 const keyWikiMediaNew = "new"
 const keyWikiMediaNotifyUrl = "notify_url" // -> objecturl
 const keyWikiMediaParsedComment = "parsedcomment"
@@ -26,6 +28,7 @@ const keyWikiMediaRevision = "revision"
 const keyWikiMediaServerUrl = "server_url"
 const keyWikiMediaTimestamp = "timestamp" // e.g. 1730883383
 const keyWikiMediaTitle = "title"
+const keyWikiMediaTitleUrl = "title_url"
 const keyWikiMediaType = "type" // -> action
 const keyWikiMediaUser = "user" // -> subject
 
@@ -46,6 +49,9 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 	if matches {
 
 		txtRaw, txtOk := raw[keyWikiMediaParsedComment]
+		if !txtOk || txtRaw == "" {
+			txtRaw, txtOk = raw[keyWikiMediaLogActionComment]
+		}
 		var txt string
 		if txtOk {
 			txt, txtOk = txtRaw.(string)
@@ -96,11 +102,14 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 				}
 			}
 
-			notifyUrl, notifyUrlOk := raw[keyWikiMediaNotifyUrl]
-			if notifyUrlOk {
+			objUrl, objUrlOk := raw[keyWikiMediaNotifyUrl]
+			if !objUrlOk {
+				objUrl, objUrlOk = raw[keyWikiMediaTitleUrl]
+			}
+			if objUrlOk {
 				evt.Attributes[model.CeKeyObjectUrl] = &pb.CloudEventAttributeValue{
 					Attr: &pb.CloudEventAttributeValue_CeUri{
-						CeUri: notifyUrl.(string),
+						CeUri: objUrl.(string),
 					},
 				}
 			}
@@ -213,7 +222,15 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 				userId = src
 			}
 
-			err = wm.w.Write(ctx, evt, wm.groupId, userId)
+			if evt.GetTextData() == "" {
+				err = fmt.Errorf("empty event text content, source: %s, data: %s", src, string(ssEvt.Data))
+			}
+			if objUrl, objUrlOk := evt.Attributes[model.CeKeyObjectUrl]; objUrl.GetCeUri() == "" || !objUrlOk {
+				err = fmt.Errorf("empty event object url, source: %s, data: %s", src, string(ssEvt.Data))
+			}
+			if err == nil {
+				err = wm.w.Write(ctx, evt, wm.groupId, userId)
+			}
 		}
 	}
 	return
