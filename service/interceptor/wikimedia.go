@@ -105,6 +105,7 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 				}
 			}
 
+			var userId string
 			objUrl, objUrlOk := raw[keyWikiMediaTitleUrl]
 			if objUrlOk {
 				evt.Attributes[model.CeKeyObjectUrl] = &pb.CloudEventAttributeValue{
@@ -112,6 +113,7 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 						CeUri: objUrl.(string),
 					},
 				}
+				userId = objUrl.(string)
 			}
 
 			title, titleOk := raw[keyWikiMediaTitle]
@@ -213,7 +215,7 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 				}
 			}
 
-			serverName, serverNameOk := raw[keyWikiMediaWiki]
+			serverName, serverNameOk := raw[keyWikiMediaServerName]
 			if serverNameOk {
 				serverName, serverNameOk = serverName.(string)
 			}
@@ -222,6 +224,7 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 				wiki, wikiOk = wiki.(string)
 			}
 			if serverNameOk && wikiOk {
+				// try to extract the language code from the server name
 				serverNameParts := strings.Split(serverName.(string), ".")
 				if len(serverNameParts) > 2 {
 					lang := serverNameParts[0]
@@ -235,25 +238,28 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 				}
 			}
 
+			serverUrl, serverUrlOk := raw[keyWikiMediaServerUrl]
+			if serverUrlOk {
+				serverUrl, serverUrlOk = serverUrl.(string)
+			}
+			if serverUrlOk {
+				evt.Attributes[model.CeKeyWikiServerUrl] = &pb.CloudEventAttributeValue{
+					Attr: &pb.CloudEventAttributeValue_CeUri{
+						CeUri: serverUrl.(string),
+					},
+				}
+			}
+
 			notifyUrl, notifyUrlOk := raw[keyWikiMediaNotifyUrl]
 			if notifyUrlOk {
 				notifyUrl, notifyUrlOk = notifyUrl.(string)
 			}
 			if notifyUrlOk {
-				evt.Attributes[model.CeKeyNotifyUrl] = &pb.CloudEventAttributeValue{
+				evt.Attributes[model.CeKeyWikiNotifyUrl] = &pb.CloudEventAttributeValue{
 					Attr: &pb.CloudEventAttributeValue_CeUri{
 						CeUri: notifyUrl.(string),
 					},
 				}
-			}
-
-			var userId string
-			serverUrl, serverUrlOk := raw[keyWikiMediaServerUrl]
-			if serverUrlOk {
-				userId, serverUrlOk = serverUrl.(string)
-			}
-			if !serverUrlOk {
-				userId = src
 			}
 
 			if evt.GetTextData() == "" {
