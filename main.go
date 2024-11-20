@@ -48,19 +48,22 @@ func main() {
 	}
 	log.Info(fmt.Sprintf("Replica: %d", replicaIndex))
 
-	var clientAwk api.Client
-	clientAwk, err = api.
-		NewClientBuilder().
-		WriterUri(cfg.Api.Writer.Uri).
-		Build()
-	if err != nil {
-		panic(fmt.Sprintf("failed to initialize the Awakari API client: %s", err))
+	var svcWriter writer.Service
+	if replicaIndex > 0 {
+		var clientAwk api.Client
+		clientAwk, err = api.
+			NewClientBuilder().
+			WriterUri(cfg.Api.Writer.Uri).
+			Build()
+		if err != nil {
+			panic(fmt.Sprintf("failed to initialize the Awakari API client: %s", err))
+		}
+		defer clientAwk.Close()
+		log.Info("initialized the Awakari API client")
+		svcWriter = writer.NewService(clientAwk, cfg.Api.Writer.Backoff, cfg.Api.Writer.Cache, log)
+		svcWriter = writer.NewLogging(svcWriter, log)
+		defer svcWriter.Close()
 	}
-	defer clientAwk.Close()
-	log.Info("initialized the Awakari API client")
-
-	svcWriter := writer.NewService(clientAwk, cfg.Api.Writer.Backoff, cfg.Api.Writer.Cache, log)
-	svcWriter = writer.NewLogging(svcWriter, log)
 
 	ctx := context.Background()
 	stor, err := mongo.NewStorage(ctx, cfg.Db)
@@ -69,37 +72,42 @@ func main() {
 	}
 	defer stor.Close()
 
-	connPoolEvts, err := grpcpool.New(
-		func() (*grpc.ClientConn, error) {
-			return grpc.NewClient(cfg.Api.Events.Uri, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		},
-		int(cfg.Api.Events.Connection.Count.Init),
-		int(cfg.Api.Events.Connection.Count.Max),
-		cfg.Api.Events.Connection.IdleTimeout,
-	)
-	if err != nil {
-		panic(err)
-	}
-	defer connPoolEvts.Close()
-	clientEvts := events.NewClientPool(connPoolEvts)
-	svcEvts := events.NewService(clientEvts)
-	svcEvts = events.NewLoggingMiddleware(svcEvts, log)
-	err = svcEvts.SetStream(context.TODO(), cfg.Api.Events.Topics.Mastodon, cfg.Api.Events.Limit)
-	if err != nil {
-		panic(err)
-	}
-
 	var pubMastodon events.Writer
-	pubMastodon, err = svcEvts.NewPublisher(ctx, cfg.Api.Events.Topics.Mastodon)
-	if err != nil {
-		panic(err)
+	if replicaIndex > 0 {
+		var connPoolEvts *grpcpool.Pool
+		connPoolEvts, err = grpcpool.New(
+			func() (*grpc.ClientConn, error) {
+				return grpc.NewClient(cfg.Api.Events.Uri, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			},
+			int(cfg.Api.Events.Connection.Count.Init),
+			int(cfg.Api.Events.Connection.Count.Max),
+			cfg.Api.Events.Connection.IdleTimeout,
+		)
+		if err != nil {
+			panic(err)
+		}
+		defer connPoolEvts.Close()
+		clientEvts := events.NewClientPool(connPoolEvts)
+		svcEvts := events.NewService(clientEvts)
+		svcEvts = events.NewLoggingMiddleware(svcEvts, log)
+		err = svcEvts.SetStream(context.TODO(), cfg.Api.Events.Topics.Mastodon, cfg.Api.Events.Limit)
+		if err != nil {
+			panic(err)
+		}
+		pubMastodon, err = svcEvts.NewPublisher(ctx, cfg.Api.Events.Topics.Mastodon)
+		if err != nil {
+			panic(err)
+		}
+		defer pubMastodon.Close()
 	}
-	defer pubMastodon.Close()
 
-	interceptors := []interceptor.Interceptor{
-		interceptor.NewLogging(interceptor.NewMastodon(cfg.Api.Events, pubMastodon), log, "mastodon"),
-		interceptor.NewLogging(interceptor.NewWikiMedia(svcWriter, cfg.Api.GroupId, cfg.Event.Type), log, "wikimedia"),
-		interceptor.NewLogging(interceptor.NewDefault(svcWriter), log, "default"),
+	var interceptors []interceptor.Interceptor
+	if replicaIndex > 0 {
+		interceptors = append(interceptors, []interceptor.Interceptor{
+			interceptor.NewLogging(interceptor.NewMastodon(cfg.Api.Events, pubMastodon), log, "mastodon"),
+			interceptor.NewLogging(interceptor.NewWikiMedia(svcWriter, cfg.Api.GroupId, cfg.Event.Type), log, "wikimedia"),
+			interceptor.NewLogging(interceptor.NewDefault(svcWriter), log, "default"),
+		}...)
 	}
 
 	handlersLock := &sync.Mutex{}
@@ -108,7 +116,7 @@ func main() {
 
 	svc := service.NewService(stor, uint32(replicaIndex), handlersLock, handlerByUrl, handlerFactory)
 	svc = service.NewServiceLogging(svc, log)
-	if replicaIndex > 0 { // 1st replica is dummy
+	if replicaIndex > 0 {
 		err = resumeHandlers(ctx, log, svc, uint32(replicaIndex), handlersLock, handlerByUrl, handlerFactory)
 		if err != nil {
 			panic(err)
