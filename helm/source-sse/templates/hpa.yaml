@@ -8,7 +8,7 @@ metadata:
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
-    kind: Deployment
+    kind: StatefulSet
     name: {{ include "source-sse.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
@@ -23,10 +23,10 @@ spec:
           selector:
             matchLabels:
               name: "{{ .Values.autoscaling.resolver.queue.name }}"
-              threshold: "{{ .Values.autoscaling.resolver.queue.threshold }}"
+              threshold: "{{ .Values.autoscaling.resolver.queue.threshold.length }}"
         target:
           type: Value
-          value: "8000"
+          value: "{{ .Values.autoscaling.resolver.queue.threshold.diff }}"
     {{- if .Values.autoscaling.targetCPUUtilizationValue }}
     - type: Resource
       resource:

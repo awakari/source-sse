@@ -64,15 +64,17 @@ resources:
 
 autoscaling:
   enabled: true
-  minReplicas: 1
-  maxReplicas: 10
+  minReplicas: 0
+  maxReplicas: 1
   targetCPUUtilizationValue: 100m
   targetMemoryUtilizationValue: 64Mi
   resolver:
     name: "resolver"
     queue:
       name: "resolver"
-      threshold: "10000"
+      threshold:
+        length: "10000"
+        diff: "8000"
 
 priority:
   class: "awk-major"
