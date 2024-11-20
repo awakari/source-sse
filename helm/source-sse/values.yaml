@@ -64,7 +64,7 @@ resources:
 
 autoscaling:
   enabled: true
-  minReplicas: 1 # 1st is dummy (sleeping forever)
+  minReplicas: 1 # 1st is dummy to simulate zero replicas
   maxReplicas: 2
   targetCPUUtilizationValue: 100m
   targetMemoryUtilizationValue: 64Mi
@@ -72,9 +72,9 @@ autoscaling:
     name: "resolver"
     queue:
       name: "resolver"
-      threshold:
-        length: "10000"
-        diff: "8000"
+      capacity:
+        threshold: "10000"
+        target: "8000" # means downscale when queue length > 2000 (10000 - 8000)
 
 priority:
   class: "awk-major"

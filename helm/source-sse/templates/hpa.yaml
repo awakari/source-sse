@@ -19,14 +19,14 @@ spec:
           kind: Service
           name: "{{ .Values.autoscaling.resolver.name }}"
         metric:
-          name: "awk_work_queue_threshold_diff"
+          name: "awk_work_queue_capacity"
           selector:
             matchLabels:
               name: "{{ .Values.autoscaling.resolver.queue.name }}"
-              threshold: "{{ .Values.autoscaling.resolver.queue.threshold.length }}"
+              threshold: "{{ .Values.autoscaling.resolver.queue.capacity.threshold }}"
         target:
           type: Value
-          value: "{{ .Values.autoscaling.resolver.queue.threshold.diff }}"
+          value: "{{ .Values.autoscaling.resolver.queue.capacity.target }}"
     {{- if .Values.autoscaling.targetCPUUtilizationValue }}
     - type: Resource
       resource:
