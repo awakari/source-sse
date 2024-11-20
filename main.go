@@ -47,10 +47,6 @@ func main() {
 		panic(err)
 	}
 	log.Info(fmt.Sprintf("Replica: %d", replicaIndex))
-	if replicaIndex < 1 {
-		log.Info("Replica is dummy, sleeping forever...")
-		select {}
-	}
 
 	var clientAwk api.Client
 	clientAwk, err = api.
@@ -112,9 +108,11 @@ func main() {
 
 	svc := service.NewService(stor, uint32(replicaIndex), handlersLock, handlerByUrl, handlerFactory)
 	svc = service.NewServiceLogging(svc, log)
-	err = resumeHandlers(ctx, log, svc, uint32(replicaIndex), handlersLock, handlerByUrl, handlerFactory)
-	if err != nil {
-		panic(err)
+	if replicaIndex > 0 { // 1st replica is dummy
+		err = resumeHandlers(ctx, log, svc, uint32(replicaIndex), handlersLock, handlerByUrl, handlerFactory)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	log.Info(fmt.Sprintf("starting to listen the gRPC API @ port #%d...", cfg.Api.Port))
