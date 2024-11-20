@@ -46,10 +46,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if replicaIndex < 0 {
-		panic(fmt.Sprintf("Negative replica index: %d", replicaIndex))
-	}
 	log.Info(fmt.Sprintf("Replica: %d", replicaIndex))
+	if replicaIndex < 1 {
+		log.Info("Replica is dummy, sleeping forever...")
+		select {}
+	}
 
 	var clientAwk api.Client
 	clientAwk, err = api.

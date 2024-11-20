@@ -64,8 +64,8 @@ resources:
 
 autoscaling:
   enabled: true
-  minReplicas: 0
-  maxReplicas: 1
+  minReplicas: 1 # 1st is dummy (sleeping forever)
+  maxReplicas: 2
   targetCPUUtilizationValue: 100m
   targetMemoryUtilizationValue: 64Mi
   resolver:
