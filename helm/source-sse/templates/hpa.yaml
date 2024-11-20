@@ -13,6 +13,20 @@ spec:
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:
+    - type: Object
+      object:
+        describedObject:
+          kind: Service
+          name: "{{ .Values.autoscaling.resolver.name }}"
+        metric:
+          name: "awk_work_queue_threshold_diff"
+          selector:
+            matchLabels:
+              name: "{{ .Values.autoscaling.resolver.queue.name }}"
+              threshold: "{{ .Values.autoscaling.resolver.queue.threshold }}"
+        target:
+          type: Value
+          value: "8000"
     {{- if .Values.autoscaling.targetCPUUtilizationValue }}
     - type: Resource
       resource:
