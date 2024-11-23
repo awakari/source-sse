@@ -63,17 +63,25 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 		}
 		if txtOk {
 
-			enthropy := []byte(src)
+			entropy := []byte(src)
 			switch {
-			case len(enthropy) < ksuidEnthropyLenMax:
-				for _ = range ksuidEnthropyLenMax - len(enthropy) {
-					enthropy = append(enthropy, 0)
+			case len(entropy) < ksuidEnthropyLenMax:
+				for _ = range ksuidEnthropyLenMax - len(entropy) {
+					entropy = append(entropy, 0)
 				}
-			case len(enthropy) > ksuidEnthropyLenMax:
-				enthropy = enthropy[:ksuidEnthropyLenMax]
+			case len(entropy) > ksuidEnthropyLenMax:
+				entropy = entropy[:ksuidEnthropyLenMax]
 			}
+
+			t := time.Now().UTC()
+			tNanos := uint32(t.UnixNano() % int64(time.Second))
+			entropy[0] ^= byte(tNanos << 24) // most significant byte of tNanos
+			entropy[1] ^= byte(tNanos << 16)
+			entropy[2] ^= byte(tNanos << 8)
+			entropy[3] ^= byte(tNanos)
+
 			var id ksuid.KSUID
-			id, err = ksuid.FromParts(time.Now(), enthropy)
+			id, err = ksuid.FromParts(t, entropy)
 
 			if err == nil {
 				evt := &pb.CloudEvent{
