@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/awakari/client-sdk-go v1.2.2
-	github.com/bytedance/sonic v1.12.4
+	github.com/bytedance/sonic v1.12.5
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cloudevents/sdk-go/binding/format/protobuf/v2 v2.15.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
@@ -12,7 +12,7 @@ require (
 	github.com/processout/grpc-go-pool v1.2.1
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/segmentio/ksuid v1.0.4
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.mongodb.org/mongo-driver v1.17.1
 	google.golang.org/grpc v1.68.0
 	google.golang.org/protobuf v1.35.2

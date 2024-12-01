@@ -50,7 +50,10 @@ func (h *handler) Close() error {
 func (h *handler) Handle(ctx context.Context) {
 	for {
 		evtN, err := h.handleStream(ctx)
-		if evtN == 0 && err != nil {
+		if evtN == 0 {
+			panic("events waiting timed out")
+		}
+		if err != nil {
 			panic(err)
 		}
 	}
