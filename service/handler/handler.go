@@ -68,7 +68,18 @@ func (h *handler) handleStream(ctx context.Context) (evtN uint64, err error) {
 	h.chSsEvts = make(chan *sse.Event)
 	err = h.clientSse.SubscribeChanWithContext(ctx, "", h.chSsEvts)
 	if err == nil {
-		defer h.clientSse.Unsubscribe(h.chSsEvts)
+		defer func() {
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				h.clientSse.Unsubscribe(h.chSsEvts)
+			}()
+			select {
+			case <-done:
+			case <-time.After(h.cfgEvt.StreamTimeout):
+				panic("timeout while unsubscribing")
+			}
+		}()
 		for {
 			select {
 			case ssEvt := <-h.chSsEvts:
