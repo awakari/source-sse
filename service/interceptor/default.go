@@ -2,17 +2,17 @@ package interceptor
 
 import (
 	"context"
-	"github.com/awakari/source-sse/service/writer"
+	"github.com/awakari/source-sse/api/http/pub"
 	"github.com/r3labs/sse/v2"
 )
 
 type defaultInterceptor struct {
-	w writer.Service
+	svcPub pub.Service
 }
 
-func NewDefault(w writer.Service) Interceptor {
+func NewDefault(svcPub pub.Service) Interceptor {
 	return defaultInterceptor{
-		w: w,
+		svcPub: svcPub,
 	}
 }
 

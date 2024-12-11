@@ -3,8 +3,8 @@ package interceptor
 import (
 	"context"
 	"fmt"
+	"github.com/awakari/source-sse/api/http/pub"
 	"github.com/awakari/source-sse/model"
-	"github.com/awakari/source-sse/service/writer"
 	"github.com/cloudevents/sdk-go/binding/format/protobuf/v2/pb"
 	"github.com/r3labs/sse/v2"
 	"github.com/segmentio/ksuid"
@@ -15,7 +15,7 @@ import (
 )
 
 type wikiMedia struct {
-	w       writer.Service
+	svcPub  pub.Service
 	groupId string
 	et      string
 }
@@ -39,9 +39,9 @@ const keyWikiMediaWiki = "wiki"
 const valWikiMediaSchema = "/mediawiki/recentchange/1.0.0"
 const ksuidEnthropyLenMax = 16
 
-func NewWikiMedia(w writer.Service, groupId, et string) Interceptor {
+func NewWikiMedia(svcPub pub.Service, groupId, et string) Interceptor {
 	return wikiMedia{
-		w:       w,
+		svcPub:  svcPub,
 		groupId: groupId,
 		et:      et,
 	}
@@ -292,7 +292,7 @@ func (wm wikiMedia) Handle(ctx context.Context, src string, ssEvt *sse.Event, ra
 					err = fmt.Errorf("empty event object url, source: %s, data: %s", src, string(ssEvt.Data))
 				}
 				if err == nil {
-					err = wm.w.Write(ctx, evt, wm.groupId, userId)
+					err = wm.svcPub.Publish(ctx, evt, wm.groupId, userId)
 				}
 			}
 		}

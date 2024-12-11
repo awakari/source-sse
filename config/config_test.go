@@ -14,6 +14,7 @@ func TestConfig(t *testing.T) {
 	os.Setenv("LOG_LEVEL", "4")
 	os.Setenv("REPLICA_COUNT", "2")
 	os.Setenv("REPLICA_NAME", "source-sse-1")
+	os.Setenv("API_TOKEN_INTERNAL", "foo")
 	cfg, err := NewConfigFromEnv()
 	assert.Nil(t, err)
 	assert.Equal(t, 23*time.Hour, cfg.Api.Writer.Backoff)

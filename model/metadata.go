@@ -13,3 +13,6 @@ const CeKeyTitle = "title"
 
 const CeKeyWikiNotifyUrl = "wikinotifyurl"
 const CeKeyWikiServerUrl = "wikiserverurl"
+
+const KeyGroupId = "x-awakari-group-id"
+const KeyUserId = "x-awakari-user-id"

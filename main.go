@@ -3,20 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/awakari/client-sdk-go/api"
 	apiGrpc "github.com/awakari/source-sse/api/grpc"
 	"github.com/awakari/source-sse/api/grpc/events"
+	"github.com/awakari/source-sse/api/http/pub"
 	"github.com/awakari/source-sse/config"
 	"github.com/awakari/source-sse/model"
 	"github.com/awakari/source-sse/service"
 	"github.com/awakari/source-sse/service/handler"
 	"github.com/awakari/source-sse/service/interceptor"
-	"github.com/awakari/source-sse/service/writer"
 	"github.com/awakari/source-sse/storage/mongo"
 	grpcpool "github.com/processout/grpc-go-pool"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log/slog"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -48,21 +48,11 @@ func main() {
 	}
 	log.Info(fmt.Sprintf("Replica: %d", replicaIndex))
 
-	var svcWriter writer.Service
+	var svcPub pub.Service
 	if replicaIndex > 0 {
-		var clientAwk api.Client
-		clientAwk, err = api.
-			NewClientBuilder().
-			WriterUri(cfg.Api.Writer.Uri).
-			Build()
-		if err != nil {
-			panic(fmt.Sprintf("failed to initialize the Awakari API client: %s", err))
-		}
-		defer clientAwk.Close()
-		log.Info("initialized the Awakari API client")
-		svcWriter = writer.NewService(clientAwk, cfg.Api.Writer.Backoff, cfg.Api.Writer.Cache, log)
-		svcWriter = writer.NewLogging(svcWriter, log)
-		defer svcWriter.Close()
+		svcPub = pub.NewService(http.DefaultClient, cfg.Api.Writer.Uri, cfg.Api.Token.Internal)
+		svcPub = pub.NewLogging(svcPub, log)
+		log.Info("initialized the Awakari publish API client")
 	}
 
 	ctx := context.Background()
@@ -105,8 +95,8 @@ func main() {
 	if replicaIndex > 0 {
 		interceptors = append(interceptors, []interceptor.Interceptor{
 			interceptor.NewLogging(interceptor.NewMastodon(cfg.Api.Events, pubMastodon), log, "mastodon"),
-			interceptor.NewLogging(interceptor.NewWikiMedia(svcWriter, cfg.Api.GroupId, cfg.Event.Type), log, "wikimedia"),
-			interceptor.NewLogging(interceptor.NewDefault(svcWriter), log, "default"),
+			interceptor.NewLogging(interceptor.NewWikiMedia(svcPub, cfg.Api.GroupId, cfg.Event.Type), log, "wikimedia"),
+			interceptor.NewLogging(interceptor.NewDefault(svcPub), log, "default"),
 		}...)
 	}
 

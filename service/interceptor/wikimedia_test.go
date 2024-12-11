@@ -2,7 +2,7 @@ package interceptor
 
 import (
 	"context"
-	"github.com/awakari/source-sse/service/writer"
+	"github.com/awakari/source-sse/api/http/pub"
 	"github.com/bytedance/sonic"
 	"github.com/cloudevents/sdk-go/binding/format/protobuf/v2/pb"
 	"github.com/stretchr/testify/assert"
@@ -11,30 +11,11 @@ import (
 	"testing"
 )
 
-type writerMock struct {
-	chEvt chan<- *pb.CloudEvent
-}
-
-func newWriterMock(chEvt chan<- *pb.CloudEvent) writer.Service {
-	return writerMock{
-		chEvt: chEvt,
-	}
-}
-
-func (w writerMock) Close() error {
-	return nil
-}
-
-func (w writerMock) Write(ctx context.Context, evt *pb.CloudEvent, groupId, userId string) (err error) {
-	w.chEvt <- evt
-	return
-}
-
 func TestWikiMedia_Handle(t *testing.T) {
 	chEvt := make(chan *pb.CloudEvent, 1)
 	defer close(chEvt)
-	w := newWriterMock(chEvt)
-	w = writer.NewLogging(w, slog.Default())
+	w := pub.NewMock(chEvt)
+	w = pub.NewLogging(w, slog.Default())
 	i := NewWikiMedia(w, "default", "com_awakari_sse_v1")
 	cases := map[string]struct {
 		in      string
