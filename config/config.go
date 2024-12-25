@@ -19,6 +19,7 @@ type ApiConfig struct {
 	Port   uint16 `envconfig:"API_PORT" default:"50051" required:"true"`
 	Writer struct {
 		Backoff time.Duration `envconfig:"API_WRITER_BACKOFF" default:"10s" required:"true"`
+		Timeout time.Duration `envconfig:"API_WRITER_TIMEOUT" default:"10s" required:"true"`
 		Uri     string        `envconfig:"API_WRITER_URI" default:"http://pub:8080/v1" required:"true"`
 	}
 	Token struct {
