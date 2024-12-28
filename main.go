@@ -50,7 +50,10 @@ func main() {
 
 	var svcPub pub.Service
 	if replicaIndex > 0 {
-		svcPub = pub.NewService(http.DefaultClient, cfg.Api.Writer.Uri, cfg.Api.Token.Internal, cfg.Api.Writer.Timeout)
+		clientHttp := http.Client{
+			Timeout: cfg.Api.Writer.Timeout,
+		}
+		svcPub = pub.NewService(&clientHttp, cfg.Api.Writer.Uri, cfg.Api.Token.Internal, cfg.Api.Writer.Timeout)
 		svcPub = pub.NewLogging(svcPub, log)
 		log.Info("initialized the Awakari publish API client")
 	}
