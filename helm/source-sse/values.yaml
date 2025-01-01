@@ -109,7 +109,7 @@ db:
   # Database name to use.
   name: source
   secret:
-    name: "db-mongo"
+    name: "db-mongo-external-0"
     keys:
       url: "url"
       username: "username"
